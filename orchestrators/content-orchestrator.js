@@ -140,16 +140,17 @@ export default class ContentOrchestrator {
   async saveArticle(article) {
     try {
       // Prepare article data
+      const content = article.content || article.full_text || article.fullText || '';
       const articleData = {
         title: article.title,
-        slug: this.generateSlug(article.title),
-        abstract: article.abstract,
-        full_text: article.content,
-        html_content: this.convertToHTML(article.content),
-        category: article.category,
+        slug: this.generateSlug(article.title || 'untitled'),
+        abstract: article.abstract || article.summary || '',
+        full_text: content,
+        html_content: this.convertToHTML(content),
+        category: article.category || 'general',
         keywords: article.keywords || [],
         tags: article.tags || [],
-        word_count: article.word_count,
+        word_count: article.word_count || 0,
         citation_count: article.citations?.length || 0,
         quality_score: article.quality_score || 0,
         readability_score: article.readability_score || 0,
@@ -204,6 +205,7 @@ export default class ContentOrchestrator {
 
   convertToHTML(content) {
     // Simple markdown-like conversion
+    if (!content) return '';
     return content
       .split('\n\n')
       .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
