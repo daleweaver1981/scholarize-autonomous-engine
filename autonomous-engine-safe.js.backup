@@ -1,0 +1,475 @@
+#!/usr/bin/env node
+// ScholarNet Safe Autonomous Engine - Traffic-Aware Deployment
+import Anthropic from '@anthropic-ai/sdk';
+import { Octokit } from '@octokit/rest';
+import pg from 'pg';
+import Redis from 'ioredis';
+import dotenv from 'dotenv';
+import axios from 'axios';
+import WorkingAutonomousImplementer from './autonomous-implementer-v2.js';
+
+dotenv.config({ path: '.env.production' });
+
+const { Pool } = pg;
+
+class SafeAutonomousEngine {
+  constructor(config) {
+    this.claude = new Anthropic({ apiKey: config.anthropicKey });
+    this.github = new Octokit({ auth: config.githubToken });
+    
+    this.db = new Pool({
+      host: config.dbHost,
+      port: config.dbPort,
+      database: config.dbName,
+      user: config.dbUser,
+      password: config.dbPassword,
+      max: 20
+    });
+    
+    this.redis = new Redis({
+      host: config.redisHost,
+      port: config.redisPort,
+      password: config.redisPassword || undefined
+    });
+    
+    this.repo = {
+      owner: config.repoOwner,
+      repo: config.repoName
+    };
+    
+    // Safety configuration with deployment windows
+    this.safetyConfig = {
+      dryRunMode: config.dryRunMode === 'true',
+      maxDailyDeployments: parseInt(config.maxDailyDeployments) || 3,
+      protectedPaths: [
+        'src/auth/**',
+        'src/payment/**',
+        'src/paypal/**',
+        'src/webhooks/paypal/**',
+        'src/subscriptions/**'
+      ],
+      // DEPLOYMENT WINDOWS (UTC hours)
+      // Default: 2 AM - 6 AM Pacific (10 AM - 2 PM UTC)
+      deploymentWindows: [
+        { start: 10, end: 14, label: 'Late Night Pacific (2 AM - 6 AM)' }
+      ],
+      // Minimum traffic threshold (% of daily average)
+      maxTrafficThreshold: 0.15 // Only deploy when traffic < 15% of daily average
+    };
+    
+    this.deployments = [];
+    this.improvements = [];
+    
+    console.log('🤖 Safe Autonomous Engine Initialized');
+    console.log(`🔒 Dry Run Mode: ${this.safetyConfig.dryRunMode ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`⏰ Deployment Windows: ${this.safetyConfig.deploymentWindows.map(w => w.label).join(', ')}`);
+  }
+
+  async run() {
+    console.log('\n🚀 Starting Safe Autonomous Cycle...\n');
+    
+    try {
+      await this.preFlight();
+      const intelligence = await this.gatherIntelligence();
+      const opportunities = await this.analyzeAndPrioritize(intelligence);
+      
+      // Check if we're in a deployment window
+      const canDeployNow = await this.isDeploymentWindowOpen();
+      
+      // Attempt implementation if enabled AND in deployment window
+      let implementations = [];
+      if (!this.safetyConfig.dryRunMode && opportunities.length > 0) {
+        if (canDeployNow) {
+          implementations = await this.executeImplementations(opportunities);
+        } else {
+          console.log('\n⏸️  Outside deployment window - skipping implementation');
+          console.log('   Deployments only occur during low-traffic hours\n');
+        }
+      } else if (this.safetyConfig.dryRunMode) {
+        console.log('\n⏭️  DRY RUN MODE - Skipping implementation\n');
+      }
+      
+      const report = await this.generateReport(intelligence, opportunities, implementations);
+      
+      console.log('\n✅ Autonomous Cycle Complete\n');
+      
+    } catch (error) {
+      console.error('❌ Error in autonomous cycle:', error);
+      await this.notifyError(error);
+    }
+  }
+
+  async isDeploymentWindowOpen() {
+    console.log('⏰ Checking deployment window...\n');
+    
+    const now = new Date();
+    const currentHourUTC = now.getUTCHours();
+    
+    // Check if current hour is in any deployment window
+    let inWindow = false;
+    let windowLabel = '';
+    
+    for (const window of this.safetyConfig.deploymentWindows) {
+      if (currentHourUTC >= window.start && currentHourUTC < window.end) {
+        inWindow = true;
+        windowLabel = window.label;
+        break;
+      }
+    }
+    
+    if (!inWindow) {
+      console.log(`  ❌ Current time: ${now.toISOString()}`);
+      console.log(`  ❌ UTC Hour: ${currentHourUTC}:00`);
+      console.log(`  ❌ Not in deployment window`);
+      console.log(`  ℹ️  Next window: ${this.safetyConfig.deploymentWindows[0].label}\n`);
+      return false;
+    }
+    
+    console.log(`  ✅ In deployment window: ${windowLabel}`);
+    console.log(`  ✅ UTC Hour: ${currentHourUTC}:00`);
+    
+    // Check current traffic levels
+    const trafficOk = await this.isTrafficLow();
+    
+    if (!trafficOk) {
+      console.log(`  ❌ Traffic still too high - waiting for quieter time\n`);
+      return false;
+    }
+    
+    console.log(`  ✅ Traffic is low - safe to deploy\n`);
+    
+    return true;
+  }
+
+  async isTrafficLow() {
+    try {
+      // Get average requests per hour over last 24 hours
+      const avgResult = await this.db.query(`
+        SELECT 
+          COUNT(*) / 24.0 as avg_per_hour
+        FROM request_logs
+        WHERE created_at > NOW() - INTERVAL '24 hours'
+      `);
+      
+      const avgPerHour = parseFloat(avgResult.rows[0].avg_per_hour) || 0;
+      
+      // Get current hour's traffic
+      const currentResult = await this.db.query(`
+        SELECT COUNT(*) as current_hour
+        FROM request_logs
+        WHERE created_at > NOW() - INTERVAL '1 hour'
+      `);
+      
+      const currentHour = parseInt(currentResult.rows[0].current_hour) || 0;
+      
+      // Calculate percentage
+      const trafficPercentage = avgPerHour > 0 ? (currentHour / avgPerHour) : 0;
+      
+      console.log(`  → Current traffic: ${currentHour} requests/hour`);
+      console.log(`  → 24h average: ${avgPerHour.toFixed(0)} requests/hour`);
+      console.log(`  → Traffic level: ${(trafficPercentage * 100).toFixed(1)}% of average`);
+      console.log(`  → Threshold: ${(this.safetyConfig.maxTrafficThreshold * 100)}% of average`);
+      
+      return trafficPercentage <= this.safetyConfig.maxTrafficThreshold;
+      
+    } catch (error) {
+      console.log(`  ⚠️  Could not check traffic - assuming safe`);
+      return true;
+    }
+  }
+
+  async preFlight() {
+    console.log('🔍 Pre-Flight Safety Checks...\n');
+    
+    try {
+      await this.db.query('SELECT NOW()');
+      console.log('  ✅ Database Connection');
+      
+      await this.redis.ping();
+      console.log('  ✅ Redis Connection');
+      
+      const response = await this.claude.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }]
+      });
+      console.log('  ✅ Anthropic API (has credits)');
+      
+      console.log('\n✅ All Pre-Flight Checks Passed\n');
+      
+    } catch (error) {
+      throw new Error(`Pre-flight failed: ${error.message}`);
+    }
+  }
+
+  async gatherIntelligence() {
+    console.log('📊 Gathering Intelligence...\n');
+    
+    const [revenueMetrics, userMetrics, performanceMetrics] = await Promise.all([
+      this.analyzeRevenue(),
+      this.analyzeUsers(),
+      this.analyzePerformance()
+    ]);
+    
+    return {
+      revenueMetrics,
+      userMetrics,
+      performanceMetrics,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  async analyzeRevenue() {
+    console.log('  → Analyzing revenue...');
+    
+    try {
+      const result = await this.db.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE paypal_status = 'ACTIVE') as active,
+          COUNT(*) as total
+        FROM "Subscriptions"
+      `);
+      
+      const { active, total } = result.rows[0];
+      const mrr = (parseInt(active) || 0) * 24.99;
+      
+      return {
+        activeSubscriptions: parseInt(active) || 0,
+        totalSubscriptions: parseInt(total) || 0,
+        mrr: mrr,
+        arr: mrr * 12
+      };
+      
+    } catch (error) {
+      console.log('    ⚠️  Could not fetch revenue data');
+      return { activeSubscriptions: 0, totalSubscriptions: 0, mrr: 0, arr: 0 };
+    }
+  }
+
+  async analyzeUsers() {
+    console.log('  → Analyzing users...');
+    
+    try {
+      const result = await this.db.query(`
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM "Analytics"
+        WHERE user_id IS NOT NULL
+      `);
+      
+      return {
+        totalUsers: parseInt(result.rows[0].count) || 0
+      };
+      
+    } catch (error) {
+      return { totalUsers: 0 };
+    }
+  }
+
+  async analyzePerformance() {
+    console.log('  → Analyzing performance...');
+    
+    try {
+      const response = await axios.get('***REMOVED***health', { timeout: 5000 });
+      
+      return {
+        healthy: response.status === 200,
+        responseTime: response.headers['x-response-time'] || 'N/A'
+      };
+      
+    } catch (error) {
+      return { healthy: false, responseTime: 'N/A' };
+    }
+  }
+
+  async analyzeAndPrioritize(intelligence) {
+    console.log('\n🧠 AI Analysis...\n');
+    
+    const prompt = `You are an autonomous optimization AI for ScholarNet AI, an educational SaaS platform.
+
+CRITICAL SAFETY RULES:
+- NEVER touch PayPal integration, webhooks, or payment processing
+- NEVER modify authentication or user data handling
+- Focus on: performance, analytics, UI/UX, content, monitoring
+
+CURRENT STATE:
+${JSON.stringify(intelligence, null, 2)}
+
+Generate 10 SAFE improvement opportunities focusing on:
+- Performance optimization
+- User experience improvements
+- Analytics enhancement
+- Content optimization
+- Monitoring improvements
+
+For each opportunity provide:
+{
+  "title": "Brief description",
+  "category": "performance|ui|analytics|content|monitoring",
+  "impact": {
+    "revenue": "estimated $ impact",
+    "users": "expected improvement"
+  },
+  "riskLevel": 0-3 (only suggest 0-1 for ultra-safe),
+  "paypalSafe": true
+}
+
+Return as JSON array of opportunities.`;
+
+    try {
+      const response = await this.claude.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      const opportunities = JSON.parse(
+        response.content[0].text.replace(/```json\n?/g, '').replace(/```\n?/g, '')
+      );
+      
+      console.log(`  ✓ Identified ${opportunities.length} opportunities\n`);
+      
+      return opportunities;
+      
+    } catch (error) {
+      console.error('  ❌ AI analysis failed:', error.message);
+      return [];
+    }
+  }
+
+  async executeImplementations(opportunities) {
+    console.log('\n🚀 Checking for Safe Implementation Opportunities...\n');
+    
+    const ultraSafe = opportunities.filter(opp => 
+      opp.riskLevel <= 1 && 
+      opp.paypalSafe === true
+    );
+    
+    if (ultraSafe.length === 0) {
+      console.log('  ℹ️  No ultra-safe opportunities found\n');
+      return [];
+    }
+    
+    console.log(`  ✓ Found ${ultraSafe.length} ultra-safe opportunities\n`);
+    
+    const implementer = new WorkingAutonomousImplementer();
+    
+    const canDeploy = await implementer.canDeploy();
+    
+    if (!canDeploy) {
+      console.log('  ⏸️  Deployment not allowed at this time\n');
+      await implementer.db.end();
+      await implementer.redis.quit();
+      return [];
+    }
+    
+    const topOpportunity = ultraSafe[0];
+    
+    console.log(`  → Selected: ${topOpportunity.title}\n`);
+    
+    const result = await implementer.implementSafely(topOpportunity);
+    
+    await implementer.db.end();
+    await implementer.redis.quit();
+    
+    return [result];
+  }
+
+  async generateReport(intelligence, opportunities, implementations = []) {
+    console.log('📊 Generating Report...\n');
+    
+    const report = {
+      timestamp: new Date().toISOString(),
+      mode: this.safetyConfig.dryRunMode ? 'DRY RUN' : 'PRODUCTION',
+      intelligence,
+      opportunities: opportunities.length,
+      topOpportunities: opportunities.slice(0, 5),
+      implementations: implementations
+    };
+    
+    try {
+      await this.db.query(`
+        INSERT INTO autonomous_reports (data, created_at)
+        VALUES ($1, NOW())
+      `, [report]);
+    } catch (error) {
+      console.log('  ⚠️  Could not save report to database');
+    }
+    
+    console.log('='.repeat(60));
+    console.log('AUTONOMOUS ENGINE REPORT');
+    console.log('='.repeat(60));
+    console.log(`Mode: ${report.mode}`);
+    console.log(`Timestamp: ${report.timestamp}`);
+    console.log('');
+    console.log('METRICS:');
+    console.log(`  MRR: $${intelligence.revenueMetrics.mrr.toFixed(2)}`);
+    console.log(`  Active Subscriptions: ${intelligence.revenueMetrics.activeSubscriptions}`);
+    console.log(`  Total Users: ${intelligence.userMetrics.totalUsers}`);
+    console.log(`  System Health: ${intelligence.performanceMetrics.healthy ? '✅ Healthy' : '❌ Unhealthy'}`);
+    console.log('');
+    console.log(`OPPORTUNITIES IDENTIFIED: ${opportunities.length}`);
+    
+    if (opportunities.length > 0) {
+      console.log('');
+      console.log('TOP 5 OPPORTUNITIES:');
+      opportunities.slice(0, 5).forEach((opp, i) => {
+        console.log(`  ${i + 1}. ${opp.title}`);
+        console.log(`     Category: ${opp.category} | Risk: ${opp.riskLevel}/10`);
+        console.log(`     Impact: ${opp.impact.revenue || 'N/A'}`);
+      });
+    }
+    
+    if (implementations.length > 0) {
+      console.log('');
+      console.log('IMPLEMENTATIONS:');
+      implementations.forEach((impl, i) => {
+        console.log(`  ${i + 1}. Status: ${impl.status.toUpperCase()}`);
+        if (impl.deploymentId) {
+          console.log(`     Deployment ID: ${impl.deploymentId}`);
+        }
+        if (impl.reason) {
+          console.log(`     Reason: ${impl.reason}`);
+        }
+      });
+    }
+    
+    console.log('='.repeat(60));
+    console.log('');
+    
+    return report;
+  }
+
+  async notifyError(error) {
+    console.error('🚨 Error notification:', error.message);
+  }
+}
+
+// Main execution
+async function main() {
+  const config = {
+    anthropicKey: process.env.ANTHROPIC_API_KEY,
+    githubToken: process.env.GITHUB_TOKEN,
+    dbHost: process.env.DB_HOST,
+    dbPort: process.env.DB_PORT,
+    dbName: process.env.DB_NAME,
+    dbUser: process.env.DB_USER,
+    dbPassword: process.env.DB_PASSWORD,
+    redisHost: process.env.REDIS_HOST,
+    redisPort: process.env.REDIS_PORT,
+    redisPassword: process.env.REDIS_PASSWORD,
+    repoOwner: process.env.REPO_OWNER,
+    repoName: process.env.REPO_NAME,
+    dryRunMode: process.env.DRY_RUN_MODE,
+    maxDailyDeployments: process.env.MAX_DAILY_DEPLOYMENTS
+  };
+
+  const engine = new SafeAutonomousEngine(config);
+  await engine.run();
+  
+  await engine.db.end();
+  await engine.redis.quit();
+}
+
+main().catch(console.error);
+
+export default SafeAutonomousEngine;

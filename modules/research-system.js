@@ -1,0 +1,393 @@
+/**
+ * Research System
+ * Handles topic selection, source gathering, and research preparation
+ * AUTO-ROTATES: Groq (FREE) → DeepSeek (CHEAP) → OpenAI → Anthropic (PAID)
+ */
+
+import AIProviderManager from './ai-provider-manager.js';
+import axios from 'axios';
+import { TOPICS, RESEARCH_SOURCES, CONTENT_CONFIG } from '../config/content-config.js';
+
+export default class ResearchSystem {
+  constructor(options = {}) {
+    this.logger = options.logger || console;
+
+    // Use AI provider manager (or accept externally provided one)
+    this.ai = options.aiProvider || new AIProviderManager(this.logger);
+
+    this.dryRun = options.dryRun || false;
+
+    // Track used topics to avoid duplication
+    this.usedTopics = new Set();
+    this.topicHistory = [];
+  }
+
+  /**
+   * Generate research brief for article generation
+   * @param {Object} options - Research options
+   * @returns {Object} Research brief with topic, sources, and outline
+   */
+  async generateResearchBrief(options = {}) {
+    try {
+      const startTime = Date.now();
+
+      // 1. Select topic
+      const topic = await this.selectTopic(options.category, options.specificTopic);
+
+      // 2. Research the topic
+      const research = await this.researchTopic(topic);
+
+      // 3. Find recent developments
+      const recentDevelopments = await this.findRecentDevelopments(topic);
+
+      // 4. Generate article outline
+      const outline = await this.generateOutline(topic, research, recentDevelopments);
+
+      // 5. Compile research brief
+      const brief = {
+        id: this.generateBriefId(),
+        timestamp: new Date().toISOString(),
+        topic: topic,
+        category: this.identifyCategory(topic.keyword),
+        research: research,
+        recentDevelopments: recentDevelopments,
+        outline: outline,
+        metadata: {
+          researchTimeMs: Date.now() - startTime,
+          sourceCount: research.sources.length,
+          confidenceScore: research.confidenceScore
+        }
+      };
+
+      this.logger.info(`Research brief generated: ${topic.title}`);
+      return brief;
+
+    } catch (error) {
+      this.logger.error('Failed to generate research brief:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Select a topic for article generation
+   */
+  async selectTopic(category, specificTopic) {
+    if (specificTopic) {
+      return {
+        keyword: specificTopic,
+        title: await this.generateTitle(specificTopic),
+        category: category || 'general'
+      };
+    }
+
+    // Get all topics from all categories
+    const allTopics = Object.entries(TOPICS).flatMap(([cat, topics]) =>
+      topics.map(topic => ({ category: cat, keyword: topic }))
+    );
+
+    // Filter out recently used topics
+    const availableTopics = allTopics.filter(
+      t => !this.usedTopics.has(t.keyword)
+    );
+
+    // Reset if we've used all topics
+    if (availableTopics.length === 0) {
+      this.usedTopics.clear();
+      return this.selectTopic(category, specificTopic);
+    }
+
+    // Random selection (with category filter if specified)
+    const filteredTopics = category
+      ? availableTopics.filter(t => t.category === category)
+      : availableTopics;
+
+    if (filteredTopics.length === 0) {
+      // Fallback to all topics if filter result is empty
+      const allTopics = Object.values(TOPICS).flat();
+      filteredTopics.push(...allTopics.filter(t => !this.usedTopics.has(t.keyword)));
+    }
+
+    const selected = filteredTopics[Math.floor(Math.random() * filteredTopics.length)];
+
+    if (!selected) {
+      throw new Error('No topics available for selection');
+    }
+
+    // Add to used topics
+    this.usedTopics.add(selected.keyword);
+    this.topicHistory.push(selected.keyword);
+
+    // Generate engaging title
+    const title = await this.generateTitle(selected.keyword);
+
+    return {
+      keyword: selected.keyword,
+      title: title,
+      category: selected.category
+    };
+  }
+
+  /**
+   * Generate an engaging title for the topic
+   */
+  async generateTitle(keyword) {
+    try {
+      const prompt = `Generate an engaging, scholarly article title about "${keyword}".
+
+Requirements:
+- Academic but engaging
+- 8-15 words
+- Include the main keyword
+- Make it compelling for researchers
+- No clickbait
+
+Return ONLY the title, nothing else.`;
+
+      const content = await this.ai.generateText(prompt, {
+        maxTokens: 100
+      });
+
+      const title = content.trim();
+      return title.replace(/^["']|["']$/g, ''); // Remove quotes if present
+
+    } catch (error) {
+      // Fallback to simple title
+      return `Understanding ${keyword}: A Comprehensive Analysis`;
+    }
+  }
+
+  /**
+   * Research a topic using AI
+   */
+  async researchTopic(topic) {
+    try {
+      const prompt = `You are a research assistant helping to gather information for a scholarly article about "${topic.keyword}".
+
+Provide:
+1. Key concepts and definitions (3-5 bullet points)
+2. Current state of the field (brief overview)
+3. Major researchers or institutions (3-5 names)
+4. Recent trends or developments (3-5 items)
+5. Important statistics or facts (3-5 items with approximate dates)
+6. Related subtopics (3-5 items)
+7. Potential article angles (3 interesting perspectives)
+
+Format as structured JSON with these keys: concepts, currentState, majorResearchers, trends, statistics, subtopics, angles`;
+
+      const researchText = await this.ai.generateText(prompt, {
+        maxTokens: 2000
+      });
+
+      // Try to parse as JSON, fallback to structured object
+      let researchData;
+      try {
+        researchData = JSON.parse(researchText);
+      } catch {
+        // Parse manually if not valid JSON
+        researchData = this.parseResearchText(researchText);
+      }
+
+      return {
+        ...researchData,
+        sources: this.generateSourceList(topic),
+        confidenceScore: 0.85, // Placeholder
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      this.logger.error('Research failed:', error);
+      // Return minimal research data
+      return {
+        concepts: [`Core aspects of ${topic.keyword}`],
+        currentState: `Active research area in ${topic.category}`,
+        majorResearchers: ['Leading research institutions'],
+        trends: ['Ongoing developments in the field'],
+        statistics: ['Growing research interest'],
+        subtopics: [topic.keyword],
+        angles: ['Comprehensive overview'],
+        sources: [],
+        confidenceScore: 0.5
+      };
+    }
+  }
+
+  /**
+   * Find recent developments in the topic
+   */
+  async findRecentDevelopments(topic) {
+    try {
+      const prompt = `What are the 3 most significant recent developments (within the last 2 years) in "${topic.keyword}"?
+
+For each development, provide:
+- Brief description (2-3 sentences)
+- Approximate date or timeframe
+- Significance to the field
+
+Return as a simple list, one development per paragraph.`;
+
+      const content = await this.ai.generateText(prompt, {
+        maxTokens: 800
+      });
+
+      return content.trim();
+
+    } catch (error) {
+      return `Recent developments in ${topic.keyword} continue to shape the field.`;
+    }
+  }
+
+  /**
+   * Generate article outline
+   */
+  async generateOutline(topic, research, recentDevelopments) {
+    try {
+      const prompt = `Create a detailed outline for a scholarly article titled: "${topic.title}"
+
+Topic: ${topic.keyword}
+Category: ${topic.category}
+
+Key concepts to cover:
+${research.concepts?.join('\n') || 'Core concepts'}
+
+The outline should:
+- Have 5-7 main sections
+- Include Introduction and Conclusion
+- Cover key findings from research
+- Address recent developments
+- Be structured for academic writing
+
+Return the outline as a hierarchical structure with section titles and 2-3 bullet points per section.`;
+
+      const content = await this.ai.generateText(prompt, {
+        maxTokens: 1000
+      });
+
+      return content.trim();
+
+    } catch (error) {
+      return this.generateFallbackOutline(topic);
+    }
+  }
+
+  /**
+   * Helper: Parse research text if JSON parsing fails
+   */
+  parseResearchText(text) {
+    return {
+      concepts: this.extractSection(text, 'concept', 'definition'),
+      currentState: this.extractSection(text, 'current', 'state'),
+      majorResearchers: this.extractSection(text, 'researcher', 'institution'),
+      trends: this.extractSection(text, 'trend', 'development'),
+      statistics: this.extractSection(text, 'statistic', 'fact'),
+      subtopics: this.extractSection(text, 'subtopic', 'related'),
+      angles: this.extractSection(text, 'angle', 'perspective')
+    };
+  }
+
+  /**
+   * Helper: Extract section from text
+   */
+  extractSection(text, ...keywords) {
+    const lines = text.split('\n').filter(line => line.trim());
+    const matching = lines.filter(line =>
+      keywords.some(kw => line.toLowerCase().includes(kw))
+    );
+    return matching.length > 0 ? matching : ['Information not available'];
+  }
+
+  /**
+   * Generate source list (placeholders for now)
+   */
+  generateSourceList(topic) {
+    return [
+      {
+        title: `Recent Advances in ${topic.keyword}`,
+        authors: ['Various Researchers'],
+        year: new Date().getFullYear(),
+        source: 'Academic Journal',
+        type: 'peer-reviewed'
+      },
+      {
+        title: `${topic.keyword}: Current State of Research`,
+        authors: ['Leading Researchers'],
+        year: new Date().getFullYear() - 1,
+        source: 'University Press',
+        type: 'book'
+      },
+      {
+        title: `Understanding ${topic.keyword}`,
+        authors: ['Expert Panel'],
+        year: new Date().getFullYear(),
+        source: 'Research Institute',
+        type: 'report'
+      }
+    ];
+  }
+
+  /**
+   * Generate fallback outline
+   */
+  generateFallbackOutline(topic) {
+    return `
+I. Introduction
+   - Background on ${topic.keyword}
+   - Importance to the field
+   - Article objectives
+
+II. Historical Context
+   - Evolution of the field
+   - Key milestones
+   - Current understanding
+
+III. Current Research
+   - Recent findings
+   - Methodological approaches
+   - Major contributions
+
+IV. Analysis and Discussion
+   - Key insights
+   - Implications
+   - Controversies or debates
+
+V. Future Directions
+   - Emerging trends
+   - Research gaps
+   - Potential applications
+
+VI. Conclusion
+   - Summary of key points
+   - Significance to the field
+   - Final thoughts
+    `.trim();
+  }
+
+  /**
+   * Identify category from keyword
+   */
+  identifyCategory(keyword) {
+    for (const [category, topics] of Object.entries(TOPICS)) {
+      if (topics.includes(keyword)) {
+        return category;
+      }
+    }
+    return 'general';
+  }
+
+  /**
+   * Generate unique brief ID
+   */
+  generateBriefId() {
+    return `brief_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Get research statistics
+   */
+  getStatistics() {
+    return {
+      totalResearch: this.topicHistory.length,
+      uniqueTopics: this.usedTopics.size,
+      recentTopics: this.topicHistory.slice(-10)
+    };
+  }
+}

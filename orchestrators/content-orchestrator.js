@@ -109,7 +109,7 @@ export default class ContentOrchestrator {
 
       // Generate article content
       const article = await this.generator.generateArticle({
-        topic: brief.topic,
+        topic: brief.topic.keyword,  // Pass keyword string, not entire object
         category: brief.category,
         research: brief
       });
@@ -141,50 +141,40 @@ export default class ContentOrchestrator {
     try {
       // Prepare article data
       const content = article.content || article.full_text || article.fullText || '';
+      const metaDescription = article.abstract || article.summary || content.substring(0, 160);
+      const qualityScore = Math.min(article.quality_score || 0, 100); // Cap at 100
+      const status = qualityScore >= 80 ? 'published' : 'draft';
+
       const articleData = {
         title: article.title,
         slug: this.generateSlug(article.title || 'untitled'),
-        abstract: article.abstract || article.summary || '',
-        full_text: content,
-        html_content: this.convertToHTML(content),
-        category: article.category || 'general',
+        content: content,
+        metaDescription: metaDescription,
         keywords: article.keywords || [],
-        tags: article.tags || [],
-        word_count: article.word_count || 0,
-        citation_count: article.citations?.length || 0,
-        quality_score: article.quality_score || 0,
-        readability_score: article.readability_score || 0,
-        status: article.quality_score >= 80 ? 'approved' : 'review',
-        auto_generated: true,
-        research_brief: article.research,
-        sources: article.citations || []
+        status: status,
+        seoScore: qualityScore,
+        publishedAt: status === 'published' ? new Date() : null
       };
 
-      // Insert into database
+      // Insert into seo_content table (used by UI)
       const result = await this.db.query(
-        `INSERT INTO articles (
-          title, slug, abstract, full_text, html_content, category,
-          keywords, tags, word_count, citation_count, quality_score,
-          readability_score, status, auto_generated, research_brief, sources
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-        RETURNING id, title, slug, word_count, quality_score, created_at`,
+        `INSERT INTO seo_content (
+          title, slug, content, "metaDescription", keywords, status, "seoScore", "publishedAt", "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        ON CONFLICT (slug) DO UPDATE SET
+          title = EXCLUDED.title,
+          content = EXCLUDED.content,
+          "updatedAt" = NOW()
+        RETURNING id, title, slug, LENGTH(content) as word_count, "seoScore" as quality_score, "createdAt" as created_at`,
         [
           articleData.title,
           articleData.slug,
-          articleData.abstract,
-          articleData.full_text,
-          articleData.html_content,
-          articleData.category,
+          articleData.content,
+          articleData.metaDescription,
           articleData.keywords,
-          articleData.tags,
-          articleData.word_count,
-          articleData.citation_count,
-          articleData.quality_score,
-          articleData.readability_score,
           articleData.status,
-          articleData.auto_generated,
-          JSON.stringify(articleData.research_brief),
-          JSON.stringify(articleData.sources)
+          articleData.seoScore,
+          articleData.publishedAt
         ]
       );
 
