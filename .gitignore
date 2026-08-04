@@ -1,0 +1,6 @@
+
+# Never commit runtime secrets. This file was committed once and carried 9 still-live
+# credentials (DB, PayPal, Anthropic, DeepSeek, and a GitHub PAT) into a hosted repo.
+.env
+.env.*
+!.env.example
