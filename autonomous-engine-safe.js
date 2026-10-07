@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ScholarNet Autonomous User Acquisition Engine - FINAL VERSION
+// Scholarize Autonomous User Acquisition Engine - FINAL VERSION
 import Anthropic from '@anthropic-ai/sdk';
 import pg from 'pg';
 import Redis from 'ioredis';

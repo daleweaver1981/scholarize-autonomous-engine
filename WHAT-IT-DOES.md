@@ -1,6 +1,6 @@
 # 🤖 What Your AI Autonomous System Does
 
-**ScholarNet Autonomous Engine - Complete Capabilities Overview**
+**Scholarize Autonomous Engine - Complete Capabilities Overview**
 
 ---
 

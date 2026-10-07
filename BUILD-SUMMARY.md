@@ -1,4 +1,4 @@
-# 🚀 ScholarNet Autonomous Engine - Build Summary
+# 🚀 Scholarize Autonomous Engine - Build Summary
 
 ## What We've Built: A Self-Improving AI System
 
@@ -26,7 +26,7 @@
 - Tests performance automatically (quality + speed)
 - Creates upgrade PRs with proof of improvement
 - Researches new AI techniques
-- Ensures ScholarNet always uses the best AI
+- Ensures Scholarize always uses the best AI
 
 ### Key File
 - `modules/code-quality-engine.js` (11.4 KB, ~380 lines)

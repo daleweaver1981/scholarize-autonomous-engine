@@ -42,7 +42,7 @@ Human tracks AI news  →     AI tracks itself
 6. **Research:** Find new AI techniques
 7. **Implement:** Admin reviews & merges
 
-**Result:** ScholarNet always uses the best AI available!
+**Result:** Scholarize always uses the best AI available!
 
 ### Current Capabilities
 
@@ -243,7 +243,7 @@ This is **not** a traditional autonomous system that does what it's programmed t
    - Zero manual intervention needed
 
 ✅ **90 Days:**
-   - ScholarNet using latest AI capabilities
+   - Scholarize using latest AI capabilities
    - Competitive advantage maintained
    - Proven ROI
 

@@ -455,7 +455,7 @@ Worker 3: Cycles 5-6 (50 articles)
 ## 🚦 Status Dashboard (Concept)
 
 ```
-📊 ScholarNet Content Engine
+📊 Scholarize Content Engine
 
 Today's Progress:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

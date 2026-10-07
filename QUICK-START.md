@@ -2,7 +2,7 @@
 
 ## 🚀 What Is This?
 
-A **self-improving AI system** that automatically upgrades ScholarNet as AI technology advances.
+A **self-improving AI system** that automatically upgrades Scholarize as AI technology advances.
 
 ## ⚡ Quick Test (2 minutes)
 
@@ -184,7 +184,7 @@ node test-ai-evolution.js 2>&1 | tee evolution.log
 
 **5-Second Summary:**
 
-This engine automatically detects new AI models, tests them, and creates upgrade PRs so ScholarNet always uses the best AI available—with zero manual work.
+This engine automatically detects new AI models, tests them, and creates upgrade PRs so Scholarize always uses the best AI available—with zero manual work.
 
 **Test it now:**
 ```bash

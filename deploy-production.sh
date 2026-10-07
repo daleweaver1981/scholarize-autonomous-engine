@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# ScholarNet Autonomous Engine - Production Deployment Script
+# Scholarize Autonomous Engine - Production Deployment Script
 # This script will deploy your system to production
 
 set -e  # Exit on any error
 
 echo "╔══════════════════════════════════════════════════════════╗"
-echo "║   ScholarNet Autonomous Engine - Production Deployment   ║"
+echo "║   Scholarize Autonomous Engine - Production Deployment   ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 

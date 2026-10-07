@@ -1,4 +1,4 @@
--- ScholarNet Autonomous Engine Database Schema
+-- Scholarize Autonomous Engine Database Schema
 
 -- Backups table
 CREATE TABLE IF NOT EXISTS backups (

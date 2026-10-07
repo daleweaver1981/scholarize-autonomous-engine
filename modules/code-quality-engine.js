@@ -57,7 +57,7 @@ class CodeQualityEngine {
     console.log('');
     console.log('════════════════════════════════════════════════════════');
     console.log('  🧬 AI EVOLUTION CHECK');
-    console.log('  ScholarNet Self-Improvement System');
+    console.log('  Scholarize Self-Improvement System');
     console.log('════════════════════════════════════════════════════════');
     console.log('');
 

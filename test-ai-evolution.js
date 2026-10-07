@@ -15,7 +15,7 @@ const mockOrchestrator = {
 async function testAIEvolution() {
   console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║     AI EVOLUTION ENGINE - TEST DEMO                    ║');
-  console.log('║     ScholarNet Self-Improving System                   ║');
+  console.log('║     Scholarize Self-Improving System                   ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -54,7 +54,7 @@ async function testAIEvolution() {
     console.log('   ↓');
     console.log('   Admin reviews & merges');
     console.log('   ↓');
-    console.log('   ScholarNet now uses latest AI! ✨');
+    console.log('   Scholarize now uses latest AI! ✨');
     console.log('');
     return;
   }

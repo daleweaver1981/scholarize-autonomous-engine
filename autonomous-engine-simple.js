@@ -75,7 +75,7 @@ class SimpleAutonomousEngine {
   }
 
   async analyzeSystem() {
-    console.log('\n📊 Analyzing ScholarNet System...\n');
+    console.log('\n📊 Analyzing Scholarize System...\n');
     
     // Get basic metrics
     const metrics = {

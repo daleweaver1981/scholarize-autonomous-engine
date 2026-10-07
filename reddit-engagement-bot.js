@@ -29,7 +29,7 @@ class RedditEngagementBot {
     ];
     
     this.maxCommentsPerDay = 5;
-    this.mentionScholarNetPercent = 0.10; // 10% of responses
+    this.mentionScholarizePercent = 0.10; // 10% of responses
   }
 
   async setup() {
@@ -66,7 +66,7 @@ class RedditEngagementBot {
         `https://www.reddit.com/r/${subreddit}/new.json?limit=${limit}`,
         { 
           headers: { 
-            'User-Agent': 'Mozilla/5.0 (compatible; ScholarNetBot/1.0)'
+            'User-Agent': 'Mozilla/5.0 (compatible; ScholarizeBot/1.0)'
           },
           timeout: 10000
         }
@@ -115,7 +115,7 @@ class RedditEngagementBot {
   }
 
   async generateResponse(post) {
-    const shouldMention = Math.random() < this.mentionScholarNetPercent;
+    const shouldMention = Math.random() < this.mentionScholarizePercent;
 
     const prompt = `You are a helpful college student on Reddit helping another student with their question.
 
@@ -128,7 +128,7 @@ Generate a genuinely helpful response (150-300 words):
 - Share 2-3 concrete tips or strategies
 - Keep it natural and conversational
 - Use casual Reddit tone (not corporate)
-${shouldMention ? '- In the last paragraph, casually mention ScholarNet AI as a tool you personally use (1-2 sentences max, natural)' : '- Do NOT mention any specific tools, products, or apps'}
+${shouldMention ? '- In the last paragraph, casually mention Scholarize as a tool you personally use (1-2 sentences max, natural)' : '- Do NOT mention any specific tools, products, or apps'}
 
 Write ONLY the response text, no meta-commentary or labels.`;
 
@@ -238,7 +238,7 @@ Write ONLY the response text, no meta-commentary or labels.`;
         ]);
 
         console.log(`\n  📝 Response generated (${response.text.length} chars)`);
-        console.log(`    Mentioned ScholarNet: ${response.mentioned ? 'Yes' : 'No'}`);
+        console.log(`    Mentioned Scholarize: ${response.mentioned ? 'Yes' : 'No'}`);
         console.log(`    URL: ${post.url}`);
         console.log(`\n    Preview:\n    "${response.text.substring(0, 200)}..."\n`);
 
@@ -289,14 +289,14 @@ Write ONLY the response text, no meta-commentary or labels.`;
       result.rows.forEach(row => {
         console.log(`\n  r/${row.subreddit}:`);
         console.log(`    Total Responses: ${row.total_responses}`);
-        console.log(`    Mentioned ScholarNet: ${row.mentioned_scholarnet}`);
+        console.log(`    Mentioned Scholarize: ${row.mentioned_scholarnet}`);
         console.log(`    Avg Post Score: ${Math.round(row.avg_post_score)}`);
       });
 
       const total = totals.rows[0];
       console.log('\n\nOVERALL:');
       console.log(`  Total Responses: ${total.total}`);
-      console.log(`  ScholarNet Mentions: ${total.mentions} (${Math.round(total.mentions / total.total * 100)}%)`);
+      console.log(`  Scholarize Mentions: ${total.mentions} (${Math.round(total.mentions / total.total * 100)}%)`);
       console.log(`  Responses Today: ${total.today}`);
     } else {
       console.log('\nNo responses generated yet.');

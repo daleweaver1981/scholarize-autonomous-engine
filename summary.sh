@@ -1,7 +1,7 @@
 #!/bin/bash
 clear
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║     ScholarNet Autonomous Engine - OPERATIONAL         ║"
+echo "║     Scholarize Autonomous Engine - OPERATIONAL         ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 echo "🤖 Status: ACTIVE"

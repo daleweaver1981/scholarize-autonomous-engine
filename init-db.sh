@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "════════════════════════════════════════════════════════"
-echo "  ScholarNet Database Initialization"
+echo "  Scholarize Database Initialization"
 echo "════════════════════════════════════════════════════════"
 echo ""
 

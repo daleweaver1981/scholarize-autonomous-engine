@@ -2,7 +2,7 @@
 
 ## The Self-Improving Autonomous System
 
-This module enables ScholarNet to **automatically upgrade itself** as AI technology advances.
+This module enables Scholarize to **automatically upgrade itself** as AI technology advances.
 
 ## How It Works
 
@@ -42,7 +42,7 @@ Every Monday at 1 AM:
 
 6. ADMIN REVIEWS & MERGES
    ↓
-   ScholarNet now uses latest AI! ✨
+   Scholarize now uses latest AI! ✨
 ```
 
 ## Key Features
@@ -98,7 +98,7 @@ export AI_EVOLUTION_ENABLED=true
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Repository path
-export SCHOLARNET_REPO=/opt/scholarnet-ai
+export SCHOLARIZE_REPO=/opt/scholarnet-ai
 ```
 
 ### Config Options
@@ -136,7 +136,7 @@ node test-ai-evolution.js
 ```
 ════════════════════════════════════════════════════════
   🧬 AI EVOLUTION CHECK
-  ScholarNet Self-Improvement System
+  Scholarize Self-Improvement System
 ════════════════════════════════════════════════════════
 
 STEP 1: Checking for new Claude models...
@@ -236,7 +236,7 @@ Monday 9 AM:
 Admin: Reviews data, clicks Merge
 
 Monday 9:05 AM:
-  ✅ ScholarNet uses Sonnet 5.0
+  ✅ Scholarize uses Sonnet 5.0
   ✅ Better content quality
   ✅ Faster generation
   ✅ Zero manual work
@@ -315,7 +315,7 @@ const log = engine.getEvolutionLog();
 ---
 
 **Built with:** Claude Sonnet 4.5  
-**Purpose:** Keep ScholarNet at the cutting edge of AI  
+**Purpose:** Keep Scholarize at the cutting edge of AI  
 **Impact:** Continuous improvement without manual effort  
 
 🚀 **The future is autonomous.**

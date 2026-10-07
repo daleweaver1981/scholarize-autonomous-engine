@@ -7,7 +7,7 @@ BASEURL="https://scholar.0xpi.com"
 # embed the Postgres password as a literal in three places, which is why it had to stay out
 # of version control - and a live cron job outside version control is its own problem.
 # cron gives a bare environment, so load it here rather than assuming it is exported.
-ENV_FILE="${SCHOLARNET_ENV_FILE:-/opt/scholarnet-ai/backend/.env}"
+ENV_FILE="${SCHOLARIZE_ENV_FILE:-/opt/scholarnet-ai/backend/.env}"
 if [ -z "$DATABASE_URL" ] && [ -f "$ENV_FILE" ]; then
   DATABASE_URL=$(sed -n "s/^[[:space:]]*DATABASE_URL=//p" "$ENV_FILE" | head -1)
   DATABASE_URL=${DATABASE_URL%\"}

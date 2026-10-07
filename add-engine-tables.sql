@@ -1,4 +1,4 @@
--- Add Autonomous Engine Tables to Existing ScholarNet Database
+-- Add Autonomous Engine Tables to Existing Scholarize Database
 -- This script safely adds only the missing tables needed by the autonomous engine
 
 -- Enable extensions (IF NOT EXISTS is safe)
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS articles (
     html_content TEXT,
 
     -- Metadata
-    author VARCHAR(255) DEFAULT 'ScholarNet Research Team',
+    author VARCHAR(255) DEFAULT 'Scholarize Research Team',
     category VARCHAR(100) NOT NULL,
     tags TEXT[],
     keywords TEXT[],

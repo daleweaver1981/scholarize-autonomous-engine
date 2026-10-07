@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ScholarNet Safe Autonomous Engine - Traffic-Aware Deployment
+// Scholarize Safe Autonomous Engine - Traffic-Aware Deployment
 import Anthropic from '@anthropic-ai/sdk';
 import { Octokit } from '@octokit/rest';
 import pg from 'pg';
@@ -284,7 +284,7 @@ class SafeAutonomousEngine {
   async analyzeAndPrioritize(intelligence) {
     console.log('\n🧠 AI Analysis...\n');
     
-    const prompt = `You are an autonomous optimization AI for ScholarNet AI, an educational SaaS platform.
+    const prompt = `You are an autonomous optimization AI for Scholarize, an educational SaaS platform.
 
 CRITICAL SAFETY RULES:
 - NEVER touch PayPal integration, webhooks, or payment processing

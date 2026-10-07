@@ -273,7 +273,7 @@ class UltraSafeImplementer {
   async generateImplementation(opportunity) {
     console.log('   → Asking Claude for implementation...');
     
-    const prompt = `Generate COMPLETE, PRODUCTION-READY code for ScholarNet AI.
+    const prompt = `Generate COMPLETE, PRODUCTION-READY code for Scholarize.
 
 OPPORTUNITY:
 ${JSON.stringify(opportunity, null, 2)}

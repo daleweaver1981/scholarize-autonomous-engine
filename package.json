@@ -2,7 +2,7 @@
   "name": "scholarnet-autonomous-engine",
   "version": "1.0.0",
   "type": "module",
-  "description": "Self-improving autonomous engine for ScholarNet",
+  "description": "Self-improving autonomous engine for Scholarize",
   "main": "master-orchestrator.js",
   "scripts": {
     "start": "node master-orchestrator.js",
@@ -26,7 +26,7 @@
     "evolution",
     "orchestrator"
   ],
-  "author": "ScholarNet Team",
+  "author": "Scholarize Team",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",

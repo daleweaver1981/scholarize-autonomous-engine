@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "📊 Analyzing ScholarNet Traffic Patterns"
+echo "📊 Analyzing Scholarize Traffic Patterns"
 echo "========================================"
 echo ""
 

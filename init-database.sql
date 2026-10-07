@@ -1,4 +1,4 @@
--- ScholarNet Database Initialization Script
+-- Scholarize Database Initialization Script
 -- This script creates the database, user, and loads the schema
 
 -- Connect as postgres user to create database and user

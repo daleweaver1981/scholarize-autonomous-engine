@@ -281,7 +281,7 @@ Write ONLY the "${sectionDef.name}" section content. Do not include the section 
       htmlContent: this.generateHTML(brief.topic.title, content.sections),
 
       // Metadata
-      author: 'ScholarNet Research Team',
+      author: 'Scholarize Research Team',
       category: brief.category,
       tags: metadata.tags,
       keywords: metadata.keywords,

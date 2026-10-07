@@ -25,7 +25,7 @@ class MasterOrchestrator {
   async initialize() {
     console.log('');
     console.log('════════════════════════════════════════════════════════');
-    console.log('  ScholarNet Autonomous Engine');
+    console.log('  Scholarize Autonomous Engine');
     console.log('  Master Orchestrator v1.0');
     console.log('════════════════════════════════════════════════════════');
     console.log('');

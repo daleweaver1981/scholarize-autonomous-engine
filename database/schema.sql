@@ -1,4 +1,4 @@
--- ScholarNet Autonomous Engine Database Schema
+-- Scholarize Autonomous Engine Database Schema
 -- PostgreSQL 14+
 
 -- Enable UUID extension
@@ -23,7 +23,7 @@ CREATE TABLE articles (
     html_content TEXT,
 
     -- Metadata
-    author VARCHAR(255) DEFAULT 'ScholarNet Research Team',
+    author VARCHAR(255) DEFAULT 'Scholarize Research Team',
     category VARCHAR(100) NOT NULL,
     tags TEXT[],
     keywords TEXT[],
@@ -449,7 +449,7 @@ VALUES (
     'database_initialized',
     'system',
     'info',
-    'ScholarNet Autonomous Engine database initialized successfully',
+    'Scholarize Autonomous Engine database initialized successfully',
     jsonb_build_object(
         'version', '1.0.0',
         'schema_version', '1',

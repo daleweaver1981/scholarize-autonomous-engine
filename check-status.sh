@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "════════════════════════════════════════════════════════"
-echo "  ScholarNet Autonomous Engine - Status Check"
+echo "  Scholarize Autonomous Engine - Status Check"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
